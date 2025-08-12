@@ -1,23 +1,128 @@
-<!DOCTYPE html>
-<html lang="fa">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>فرم ثبت اطلاعات</title>
-</head>
-<body>
-    <h2>فرم ثبت اطلاعات</h2>
-    <form action="https://formspree.io/f/xnnzlzgg" method="POST">
-        <label>نام:</label><br>
-        <input type="text" name="first_name" required><br><br>
+// Professional Customer Service Dashboard (Single-file React component) // Author (header): آقای مهندس لطیف التجار بزرگ // Tailwind CSS utility classes are used. Component is production-ready single-file React default export. // Features included: // - Top header with author name // - Left sidebar (Navigation) // - Overview cards (Stats) // - Ticket list with search, filters, tags // - Ticket detail / chat panel with quick-reply templates // - Simple mock data and local state (no backend) // - Responsive layout, accessible controls
 
-        <label>نام خانوادگی:</label><br>
-        <input type="text" name="last_name" required><br><br>
+import React, { useState, useMemo } from 'react'; import { motion } from 'framer-motion';
 
-        <label>شماره تلفن:</label><br>
-        <input type="tel" name="phone" required><br><br>
+export default function CustomerServiceDashboard() { const [query, setQuery] = useState(''); const [selectedTicketId, setSelectedTicketId] = useState(null); const [tickets, setTickets] = useState(sampleTickets()); const [filter, setFilter] = useState('all'); const [replyText, setReplyText] = useState('');
 
-        <button type="submit">ارسال</button>
-    </form>
-</body>
-</html>
+const filtered = useMemo(() => { return tickets.filter(t => { if (filter !== 'all' && t.status !== filter) return false; if (!query) return true; const q = query.toLowerCase(); return ( t.title.toLowerCase().includes(q) || t.customer.name.toLowerCase().includes(q) || t.lastMessage.toLowerCase().includes(q) ); }); }, [tickets, query, filter]);
+
+const selected = tickets.find(t => t.id === selectedTicketId) || filtered[0] || null;
+
+function sendReply() { if (!selected) return; if (!replyText.trim()) return; const now = new Date().toLocaleString(); const updated = tickets.map(t => t.id === selected.id ? { ...t, messages: [...t.messages, { from: 'agent', text: replyText, time: now }], lastMessage: replyText } : t ); setTickets(updated); setReplyText(''); }
+
+function quickClose(id) { setTickets(tickets.map(t => (t.id === id ? { ...t, status: 'closed' } : t))); }
+
+return ( <div className="min-h-screen bg-gray-50 text-gray-800 font-sans"> {/* Header */} <header className="bg-white shadow-sm sticky top-0 z-20"> <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8"> <div className="flex items-center justify-between h-16"> <div className="flex items-center gap-4"> <div className="text-2xl font-bold">نرم‌افزار خدمات مشتریان</div> <div className="text-sm text-gray-500">پنل مدیریت — پاسخگویی سریع و حرفه‌ای</div> </div> <div className="flex items-center gap-4"> <div className="text-sm text-gray-700">نویسنده: <span className="font-semibold">آقای مهندس لطیف التجار بزرگ</span></div> <div className="px-3 py-1 rounded-lg bg-gray-100 text-sm">آنلاین</div> </div> </div> </div> </header>
+
+<main className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="grid grid-cols-12 gap-6">
+      {/* Sidebar */}
+      <aside className="col-span-12 md:col-span-3 lg:col-span-2 bg-white rounded-2xl shadow-sm p-4">
+        <nav className="space-y-2">
+          <button className="w-full text-right px-3 py-2 rounded-lg hover:bg-gray-50">داشبورد</button>
+          <button className="w-full text-right px-3 py-2 rounded-lg hover:bg-gray-50">تیکت‌ها</button>
+          <button className="w-full text-right px-3 py-2 rounded-lg hover:bg-gray-50">مشتریان</button>
+          <button className="w-full text-right px-3 py-2 rounded-lg hover:bg-gray-50">گزارشات</button>
+          <button className="w-full text-right px-3 py-2 rounded-lg hover:bg-gray-50">تنظیمات</button>
+        </nav>
+
+        <div className="mt-6">
+          <h4 className="text-sm font-semibold text-gray-600 mb-2">فیلتر وضعیت</h4>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => setFilter('all')} className={`text-right px-3 py-2 rounded-lg ${filter==='all'?'bg-blue-50':''}`}>همه</button>
+            <button onClick={() => setFilter('open')} className={`text-right px-3 py-2 rounded-lg ${filter==='open'?'bg-blue-50':''}`}>باز</button>
+            <button onClick={() => setFilter('pending')} className={`text-right px-3 py-2 rounded-lg ${filter==='pending'?'bg-yellow-50':''}`}>در انتظار</button>
+            <button onClick={() => setFilter('closed')} className={`text-right px-3 py-2 rounded-lg ${filter==='closed'?'bg-green-50':''}`}>بسته</button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Middle: tickets list and stats */}
+      <section className="col-span-12 md:col-span-4 lg:col-span-3 space-y-4">
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard title="تیکت‌ها" value={tickets.length} />
+          <StatCard title="باز" value={tickets.filter(t=>t.status==='open').length} />
+          <StatCard title="بسته" value={tickets.filter(t=>t.status==='closed').length} />
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="جستجو در تیکت‌ها یا مشتری..." className="flex-1 px-3 py-2 rounded-lg border" />
+            <button onClick={()=>setQuery('')} className="px-3 py-2 rounded-lg bg-gray-100">پاک</button>
+          </div>
+
+          <div className="divide-y"> 
+            {filtered.map(t => (
+              <div key={t.id} className={`p-3 cursor-pointer hover:bg-gray-50 ${selectedTicketId===t.id?'bg-blue-50':''}`} onClick={()=>setSelectedTicketId(t.id)}>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold">{t.title}</div>
+                  <div className="text-xs text-gray-500">{t.time}</div>
+                </div>
+                <div className="text-xs text-gray-600 mt-1">{t.customer.name} — {t.lastMessage}</div>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={`px-2 py-1 text-xs rounded ${t.status==='open'?'bg-blue-100':t.status==='pending'?'bg-yellow-100':'bg-green-100'}`}>{t.status}</span>
+                  <button onClick={(e)=>{e.stopPropagation(); quickClose(t.id);}} className="text-xs px-2 py-1 rounded bg-gray-100">بستن</button>
+                </div>
+              </div>
+            ))}
+            {filtered.length===0 && <div className="p-4 text-sm text-gray-500">تیکتی پیدا نشد</div>}
+          </div>
+        </div>
+      </section>
+
+      {/* Right: ticket detail / chat */}
+      <section className="col-span-12 md:col-span-5 lg:col-span-7 bg-white rounded-2xl shadow-sm p-4 flex flex-col">
+        {!selected && <div className="flex-1 flex items-center justify-center text-gray-400">یک تیکت برای نمایش انتخاب کنید</div>}
+
+        {selected && (
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center justify-between border-b pb-3 mb-3">
+              <div>
+                <div className="text-lg font-semibold">{selected.title}</div>
+                <div className="text-sm text-gray-600">مشتری: {selected.customer.name} — ایمیل: {selected.customer.email}</div>
+              </div>
+              <div className="text-sm text-gray-500">آخرین بروزرسانی: {selected.time}</div>
+            </div>
+
+            <div className="flex-1 overflow-auto py-2 space-y-3">
+              {selected.messages.map((m,i)=> (
+                <div key={i} className={`max-w-xl ${m.from==='agent'?'ml-auto text-right':'mr-auto text-right'}`}>
+                  <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} className={`px-4 py-2 rounded-lg ${m.from==='agent'?'bg-blue-50':'bg-gray-100'}`}>
+                    <div className="text-sm">{m.text}</div>
+                    <div className="text-xs text-gray-400 mt-1">{m.time} • {m.from==='agent'?'پاسخ‌دهنده':'مشتری'}</div>
+                  </motion.div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 border-t pt-3">
+              <div className="flex gap-2 mb-2">
+                <button onClick={()=>setReplyText('سلام و وقت بخیر — چگونه میتوانم کمک کنم؟')} className="px-3 py-1 rounded bg-gray-100 text-sm">قالب سریع ۱</button>
+                <button onClick={()=>setReplyText('با تشکر از تماس شما، تیکت شما ثبت شد و در اسرع وقت بررسی می‌شود.')} className="px-3 py-1 rounded bg-gray-100 text-sm">قالب سریع ۲</button>
+                <button onClick={()=>{navigator.clipboard?.writeText(selected.customer.email)}} className="px-3 py-1 rounded bg-gray-100 text-sm">کپی ایمیل</button>
+              </div>
+
+              <div className="flex gap-2">
+                <textarea value={replyText} onChange={e=>setReplyText(e.target.value)} rows={3} placeholder="نوشتن پاسخ..." className="flex-1 p-3 border rounded-lg" />
+                <div className="w-36 flex flex-col gap-2">
+                  <button onClick={sendReply} className="px-3 py-2 rounded-lg bg-blue-600 text-white">ارسال پاسخ</button>
+                  <button onClick={()=>setTickets(tickets.map(t=>t.id===selected.id?{...t,status:'pending'}:t))} className="px-3 py-2 rounded-lg bg-yellow-500 text-white">در انتظار</button>
+                  <button onClick={()=>setTickets(tickets.map(t=>t.id===selected.id?{...t,status:'closed'}:t))} className="px-3 py-2 rounded-lg bg-green-600 text-white">بستن تیکت</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  </main>
+
+  <footer className="text-center text-sm text-gray-500 py-6">نسخه آزمایشی — طراحی شده برای نمایش سریع رابط</footer>
+</div>
+
+); }
+
+function StatCard({ title, value }){ return ( <div className="bg-white rounded-xl p-3 shadow-sm text-right"> <div className="text-xs text-gray-500">{title}</div> <div className="text-2xl font-bold">{value}</div> </div> ); }
+
+function sampleTickets(){ const now = new Date().toLocaleString(); return [ { id: 'TCK-001', title: 'مشکل ورود به پنل کاربری', customer: { name: 'علی رضایی', email: 'ali@example.com' }, status: 'open', time: now, lastMessage: 'رمز عبور کار نمیکند', messages: [ { from: 'customer', text: 'سلام، من نمیتونم وارد پنلم بشم.', time: now }, { from: 'agent', text: 'لطفا یکبار رمز خود را بازنشانی کنید و نتیجه را اعلام کنید.', time: now } ] }, { id: 'TCK-002', title: 'درخواست فاکتور خرید', customer: { name: 'فاطمه مرادی', email: 'fateme@example.com' }, status: 'pending', time: now, lastMessage: 'مشتری منتظر ارسال فاکتور است', messages: [ { from: 'customer', text: 'فاکتور خرید را میخواهم.', time: now } ] }, { id: 'TCK-003', title: 'بازگشت کالا و پیگیری مرسوله', customer: { name: 'محمود احمدی', email: 'mahmood@example.com' }, status: 'closed', time: now, lastMessage: 'مرسوله تحویل شده و تیکت بسته شد', messages: [ { from: 'agent', text: 'ارسال انجام شد و مرسوله تحویل شد.', time: now } ] } ]; }
+
